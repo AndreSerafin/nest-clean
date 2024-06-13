@@ -1,7 +1,16 @@
 import { ZodValidationPipe } from '@/infra/http/pipes/zod-validation-pipe'
-import { Body, Controller, HttpCode, Post, UsePipes } from '@nestjs/common'
+import {
+  BadRequestException,
+  Body,
+  ConflictException,
+  Controller,
+  HttpCode,
+  Post,
+  UsePipes,
+} from '@nestjs/common'
 import { z } from 'zod'
 import { RegisterStudentUseCase } from '@/domain/forum/application/use-cases/register-student'
+import { StutentAlreadyExistsError } from '@/domain/forum/application/use-cases/errors/stutent-already-exists-error'
 
 const createAccountBodySchema = z.object({
   name: z.string(),
@@ -24,7 +33,14 @@ export class CreateAccountController {
     const result = await this.registerStudent.execute({ name, email, password })
 
     if (result.isLeft()) {
-      throw new Error()
+      const error = result.value
+
+      switch (error.constructor) {
+        case StutentAlreadyExistsError:
+          throw new ConflictException(error.message)
+        default:
+          throw new BadRequestException(error.message)
+      }
     }
   }
 }

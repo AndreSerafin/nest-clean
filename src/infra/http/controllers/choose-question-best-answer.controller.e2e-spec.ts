@@ -9,7 +9,7 @@ import { AnswerFactory } from 'test/factories/make-answer'
 import { QuestionFactory } from 'test/factories/make-question'
 import { StudentFactory } from 'test/factories/make-student'
 
-describe('Delete answer (E2E)', () => {
+describe('Choose question best answer (E2E)', () => {
   let app: INestApplication
   let prisma: PrismaService
   let studentFactory: StudentFactory
@@ -33,7 +33,7 @@ describe('Delete answer (E2E)', () => {
     await app.init()
   })
 
-  test('[DELETE] /answers/:id', async () => {
+  test('[PATCH] /answers/:answerId/choose-as-best', async () => {
     const user = await studentFactory.makePrismaStudent()
 
     const accessToken = jwt.sign({ sub: user.id.toString() })
@@ -43,25 +43,25 @@ describe('Delete answer (E2E)', () => {
     })
 
     const answer = await answerFactory.makePrismaAnswer({
-      authorId: user.id,
       questionId: question.id,
+      authorId: question.authorId,
     })
 
     const answerId = answer.id.toString()
 
     const response = await request(app.getHttpServer())
-      .delete(`/answers/${answerId}`)
+      .patch(`/answers/${answerId}/choose-as-best`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send()
 
     expect(response.statusCode).toBe(204)
 
-    const answerOnDatabase = await prisma.answer.findUnique({
+    const questionOnDatabase = await prisma.question.findFirst({
       where: {
-        id: answerId,
+        id: question.id.toString(),
       },
     })
 
-    expect(answerOnDatabase).toBeNull()
+    expect(questionOnDatabase?.bestAnswerId).toEqual(answerId)
   })
 })
